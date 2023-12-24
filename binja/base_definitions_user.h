@@ -7,6 +7,10 @@ typedef struct va_list_t {
    void *reg_save_area;
 } va_list[1];
 
+typedef struct {
+} FILE;
+
+typedef unsigned int socklen_t;
 
 typedef void (*sig_t) (int);
 sig_t signal(int sig, sig_t func);
@@ -21,6 +25,34 @@ int memcmp(const void *s1, const void *s2, size_t n);
 void * memcpy(void * dst, const void * src, size_t n);
 size_t malloc_good_size(size_t size);
 size_t malloc_size(const void *ptr);
+void *calloc(size_t count, size_t size);
+void free(void *ptr);
+void *malloc(size_t size);
+void *realloc(void *ptr, size_t size);
+void *reallocf(void *ptr, size_t size);
+void *valloc(size_t size);
+void *aligned_alloc(size_t alignment, size_t size);
+int printf(const char * format, ...);
+int fprintf(FILE *  stream, const char * format, ...);
+int sprintf(char *  str, const char *  format, ...);
+int snprintf(char * str, size_t size, const char * format, ...);
+int asprintf(char **ret, const char *format, ...);
+int dprintf(int fd, const char * format, ...);
+int vprintf(const char *  format, va_list ap);
+int vfprintf(FILE *  stream, const char *  format, va_list ap);
+int vsprintf(char *  str, const char *  format, va_list ap);
+int vsnprintf(char *  str, size_t size, const char *  format, va_list ap);
+int vasprintf(char **ret, const char *format, va_list ap);
+int vdprintf(int fd, const char *  format, va_list ap);
+ssize_t recv(int socket, void *buffer, size_t length, int flags);
+ssize_t recvfrom(int socket, void * buffer, size_t length, int flags, struct sockaddr * address, socklen_t * address_len);
+ssize_t recvmsg(int socket, struct msghdr *message, int flags);
+
+typedef __darwin_pthread_mutex_t	pthread_mutex_t;
+
+int pthread_mutex_lock(pthread_mutex_t *mutex);
+int pthread_mutex_trylock(pthread_mutex_t *mutex);
+int pthread_mutex_unlock(pthread_mutex_t *mutex);
 
 // Audit
 
@@ -61,6 +93,7 @@ typedef long CFIndex;
 typedef unsigned long CFOptionFlags;
 typedef UInt32 CFStringEncoding;
 typedef UInt32 UTF32Char;
+typedef bool boolean_t;
 typedef unsigned long CFTypeID;
 typedef void* CFDictionaryRef;
 typedef void* CFTypeRef;
@@ -82,6 +115,7 @@ typedef struct __CFURL *CFURLRef;
 typedef struct __CFArray *CFArrayRef;
 typedef struct __CFDictionary *CFMutableDictionaryRef;
 typedef struct __CFUserNotification CFUserNotificationRef;
+typedef struct __CFRunLoopSource CFRunLoopSourceRef;
 typedef CFTypeRef CFPropertyListRef;
 
 typedef struct CFRange {
@@ -208,14 +242,27 @@ enum {
 	OBJC_SYNC_NOT_INITIALIZED         = -3
 };
 
+typedef void* dispatch_queue_t;
 
-// IOKit
+
+// Mach
 
 typedef struct ipc_port *ipc_port_t;
 typedef ipc_port_t mach_port_t;
 typedef struct task *task_t;
 typedef int kern_return_t;
 typedef task_t task_port_t;
+typedef struct mach_msg_header_t {
+} mach_msg_header_t;
+
+void mig_dealloc_reply_port(mach_port_t reply_port);
+void mach_msg_destroy_from_kernel_proper(mach_msg_header_t *msg);
+void mig_put_reply_port(mach_port_t reply_port);
+mach_port_t mig_get_reply_port(void);
+
+// IOKit
+
+
 typedef mach_port_t io_object_t;
 typedef io_object_t io_connect_t;
 typedef io_object_t io_service_t;
@@ -235,6 +282,56 @@ CFMutableDictionaryRef IOServiceNameMatching(const char *name);
 CFMutableDictionaryRef IOServiceMatching(const char *name);
 kern_return_t IOServiceAddMatchingNotification(IONotificationPortRef notifyPort, const io_name_t notificationType, CFDictionaryRef matching, IOServiceMatchingCallback callback, void *refCon, io_iterator_t *notification);
 kern_return_t IOServiceAddInterestNotification(IONotificationPortRef notifyPort, io_service_t service, const io_name_t interestType, IOServiceInterestCallback callback, void *refCon, io_object_t *notification);
+kern_return_t IOMasterPort(mach_port_t bootstrapPort, mach_port_t *mainPort);
+IONotificationPortRef IONotificationPortCreate(mach_port_t mainPort);
+void IONotificationPortDestroy(IONotificationPortRef notify);
+mach_port_t IONotificationPortGetMachPort(IONotificationPortRef notify);
+CFRunLoopSourceRef IONotificationPortGetRunLoopSource(IONotificationPortRef notify);
+void IONotificationPortSetDispatchQueue(IONotificationPortRef notify, dispatch_queue_t queue);
+boolean_t IOObjectConformsTo(io_object_t object, const io_name_t className);
+CFStringRef IOObjectCopyBundleIdentifierForClass(CFStringRef classname);
+CFStringRef IOObjectCopyClass(io_object_t object);
+CFStringRef IOObjectCopySuperclassForClass(CFStringRef classname);
+kern_return_t IOObjectGetClass(io_object_t object, io_name_t className);
+uint32_t IOObjectGetKernelRetainCount(io_object_t object);
+uint32_t IOObjectGetRetainCount(io_object_t object);
+uint32_t IOObjectGetUserRetainCount(io_object_t object);
+
+
+
+// OS
+
+#define _OS_OBJECT_HEADER(isa, ref_cnt, xref_cnt) \
+        isa; /* must be pointer-sized */ \
+        int volatile ref_cnt; \
+        int volatile xref_cnt
+
+struct os_transaction_s {
+	_OS_OBJECT_HEADER(
+		const struct os_transaction_vtable_s* os_obj_isa,
+		os_obj_ref_cnt,
+		os_obj_xref_cnt
+	);
+};
+
+typedef struct os_transaction_s* os_transaction_t;
+typedef void *os_log_t;
+typedef enum os_log_type_t : uint8_t {
+
+} os_log_type_t;
+
+bool os_variant_has_internal_content(const char *subsystem);
+bool os_variant_has_internal_diagnostics(const char *subsystem);
+bool os_variant_has_internal_ui(const char *subsystem);
+bool os_variant_allows_internal_security_policies(const char *subsystem);
+bool os_variant_has_factory_content(const char *subsystem);
+bool os_variant_is_darwinos(const char *subsystem);
+bool os_variant_uses_ephemeral_storage(const char *subsystem);
+bool os_variant_is_recovery(const char *subsystem);
+bool os_variant_check(const char *subsystem, const char *variant);
+
+os_transaction_t os_transaction_create(const char* name);
+bool os_log_type_enabled(os_log_t oslog, os_log_type_t type);
 
 // Security
 
@@ -274,11 +371,242 @@ OSStatus SecIdentityCopyPrivateKey(SecIdentityRef identityRef, SecKeyRef*  _Null
 extern const CFStringRef _kSecUseKeychain;
 extern const CFStringRef _kSecAttrModificationDate;
 
+// SSL
+
+typedef struct SSLContext SSLContextRef;
+typedef const void *SSLConnectionRef;
+typedef uint16_t SSLCipherSuite;
+
+typedef enum SSLProtocolSide : int {
+    kSSLServerSide,
+    kSSLClientSide
+} SSLProtocolSide;
+typedef enum SSLClientCertificateState : int {
+    kSSLClientCertNone,
+    kSSLClientCertRequested,
+    kSSLClientCertSent,
+    kSSLClientCertRejected
+} SSLClientCertificateState;
+typedef enum SSLConnectionType : int {
+    kSSLStreamType,
+    kSSLDatagramType
+} SSLConnectionType;
+typedef enum SSLSessionOption : int {
+    kSSLSessionOptionBreakOnServerAuth = 0,
+    kSSLSessionOptionBreakOnCertRequested = 1,
+    kSSLSessionOptionBreakOnClientAuth = 2,
+    kSSLSessionOptionFalseStart = 3,
+    kSSLSessionOptionSendOneByteRecord = 4,
+    kSSLSessionOptionAllowServerIdentityChange = 5,
+    kSSLSessionOptionFallback = 6,
+    kSSLSessionOptionBreakOnClientHello = 7,
+    kSSLSessionOptionAllowRenegotiation = 8,
+    kSSLSessionOptionEnableSessionTickets = 9
+} SSLSessionOption;
+typedef enum SSLAuthenticate : int {
+    kNeverAuthenticate,
+    kAlwaysAuthenticate,
+    kTryAuthenticate
+} SSLAuthenticate;
+typedef enum SSLSessionState : int {
+    kSSLIdle,
+    kSSLHandshake,
+    kSSLConnected,
+    kSSLClosed,
+    kSSLAborted
+} SSLSessionState;
+typedef enum tls_protocol_version_t : uint16_t {
+    tls_protocol_version_TLSv10 = 0x0301,
+    tls_protocol_version_TLSv11 = 0x0302,
+    tls_protocol_version_TLSv12 = 0x0303,
+    tls_protocol_version_TLSv13 = 0x0304,
+    tls_protocol_version_DTLSv10 = 0xfeff,
+    tls_protocol_version_DTLSv12 = 0xfefd
+} tls_protocol_version_t;
+typedef enum SSLProtocol : int {
+    kSSLProtocolUnknown = 0,
+    kSSLProtocol2 = 1,
+    kSSLProtocol3 = 2,
+    kSSLProtocol3Only = 3,
+    kSSLProtocolAll = 6,
+    kTLSProtocol1 = 4,
+    kTLSProtocol1Only = 5,
+    kTLSProtocol11 = 7,
+    kTLSProtocol12 = 8,
+    kTLSProtocol13 = 10,
+    kTLSProtocolMaxSupported = 999,
+    kDTLSProtocol1 = 9,
+    kDTLSProtocol12 = 11
+} SSLProtocol;
+typedef enum tls_ciphersuite_group_t : uint16_t {
+    tls_ciphersuite_group_ats,
+    tls_ciphersuite_group_ats_compatibility,
+    tls_ciphersuite_group_compatibility,
+    tls_ciphersuite_group_default,
+    tls_ciphersuite_group_legacy,
+} tls_ciphersuite_group_t;
+typedef enum tls_ciphersuite_t : uint16_t {
+    tls_ciphersuite_AES_128_GCM_SHA256 = 0x1301,
+    tls_ciphersuite_AES_256_GCM_SHA384 = 0x1302,
+    tls_ciphersuite_CHACHA20_POLY1305_SHA256 = 0x1303,
+    tls_ciphersuite_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA = 0xC008,
+    tls_ciphersuite_ECDHE_ECDSA_WITH_AES_128_CBC_SHA = 0xC009,
+    tls_ciphersuite_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256 = 0xC023,
+    tls_ciphersuite_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 = 0xC02B,
+    tls_ciphersuite_ECDHE_ECDSA_WITH_AES_256_CBC_SHA = 0xC00A,
+    tls_ciphersuite_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384 = 0xC024,
+    tls_ciphersuite_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 = 0xC02C,
+    tls_ciphersuite_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 = 0xCCA9,
+    tls_ciphersuite_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA = 0xC012,
+    tls_ciphersuite_ECDHE_RSA_WITH_AES_128_CBC_SHA = 0xC013,
+    tls_ciphersuite_ECDHE_RSA_WITH_AES_128_CBC_SHA256 = 0xC027,
+    tls_ciphersuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256 = 0xC02F,
+    tls_ciphersuite_ECDHE_RSA_WITH_AES_256_CBC_SHA = 0xC014,
+    tls_ciphersuite_ECDHE_RSA_WITH_AES_256_CBC_SHA384 = 0xC028,
+    tls_ciphersuite_ECDHE_RSA_WITH_AES_256_GCM_SHA384 = 0xC030,
+    tls_ciphersuite_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 = 0xCCA8,
+    tls_ciphersuite_RSA_WITH_3DES_EDE_CBC_SHA = 0x000A,
+    tls_ciphersuite_RSA_WITH_AES_128_CBC_SHA = 0x002F,
+    tls_ciphersuite_RSA_WITH_AES_128_CBC_SHA256 = 0x003C,
+    tls_ciphersuite_RSA_WITH_AES_128_GCM_SHA256 = 0x009C,
+    tls_ciphersuite_RSA_WITH_AES_256_CBC_SHA = 0x0035,
+    tls_ciphersuite_RSA_WITH_AES_256_CBC_SHA256 = 0x003D,
+    tls_ciphersuite_RSA_WITH_AES_256_GCM_SHA384 = 0x009D
+} tls_ciphersuite_t;
+typedef enum SSLCiphersuiteGroup : int {
+    kSSLCiphersuiteGroupDefault,
+    kSSLCiphersuiteGroupCompatibility,
+    kSSLCiphersuiteGroupLegacy,
+    kSSLCiphersuiteGroupATS,
+    kSSLCiphersuiteGroupATSCompatibility
+} SSLCiphersuiteGroup;
+
+typedef OSStatus (*SSLReadFunc)(SSLConnectionRef connection, void *data, size_t *dataLength);
+
+SSLContextRef SSLCreateContext(CFAllocatorRef alloc, SSLProtocolSide protocolSide, SSLConnectionType connectionType);
+CFTypeID SSLContextGetTypeID(void);
+OSStatus SSLSetClientSideAuthenticate(SSLContextRef context, SSLAuthenticate auth);
+OSStatus SSLSetSessionOption(SSLContextRef context, SSLSessionOption option, Boolean value);
+OSStatus SSLGetSessionOption(SSLContextRef context, SSLSessionOption option, Boolean *value);
+OSStatus SSLSetConnection(SSLContextRef context, SSLConnectionRef connection);
+OSStatus SSLGetConnection(SSLContextRef context, SSLConnectionRef  _Nullable *connection);
+OSStatus SSLHandshake(SSLContextRef context);
+OSStatus SSLReHandshake(SSLContextRef context);
+OSStatus SSLClose(SSLContextRef context);
+OSStatus SSLSetPeerID(SSLContextRef context, const void *peerID, size_t peerIDLen);
+OSStatus SSLGetPeerID(SSLContextRef context, const void * _Nullable *peerID, size_t *peerIDLen);
+OSStatus SSLGetSessionState(SSLContextRef context, SSLSessionState *state);
+OSStatus SSLRead(SSLContextRef context, void *data, size_t dataLength, size_t *processed);
+OSStatus SSLGetBufferedReadSize(SSLContextRef context, size_t *bufferSize);
+OSStatus SSLWrite(SSLContextRef context, const void *data, size_t dataLength, size_t *processed);
+OSStatus SSLGetDatagramWriteSize(SSLContextRef dtlsContext, size_t *bufSize);
+OSStatus SSLGetMaxDatagramRecordSize(SSLContextRef dtlsContext, size_t *maxSize);
+OSStatus SSLSetMaxDatagramRecordSize(SSLContextRef dtlsContext, size_t maxSize);
+OSStatus SSLSetDatagramHelloCookie(SSLContextRef dtlsContext, const void *cookie, size_t cookieLen);
+OSStatus SSLSetPeerDomainName(SSLContextRef context, const char *peerName, size_t peerNameLen);
+OSStatus SSLGetPeerDomainNameLength(SSLContextRef context, size_t *peerNameLen);
+OSStatus SSLGetPeerDomainName(SSLContextRef context, char *peerName, size_t *peerNameLen);
+OSStatus SSLCopyRequestedPeerName(SSLContextRef context, char *peerName, size_t *peerNameLen);
+OSStatus SSLCopyRequestedPeerNameLength(SSLContextRef ctx, size_t *peerNameLen);
+OSStatus SSLSetProtocolVersionMax(SSLContextRef context, SSLProtocol maxVersion);
+OSStatus SSLSetProtocolVersionMin(SSLContextRef context, SSLProtocol minVersion);
+OSStatus SSLGetProtocolVersionMax(SSLContextRef context, SSLProtocol *maxVersion);
+OSStatus SSLGetProtocolVersionMin(SSLContextRef context, SSLProtocol *minVersion);
+OSStatus SSLGetNegotiatedProtocolVersion(SSLContextRef context, SSLProtocol *protocol);
+OSStatus SSLCopyALPNProtocols(SSLContextRef context, CFArrayRef  _Nullable *protocols);
+OSStatus SSLSetALPNProtocols(SSLContextRef context, CFArrayRef protocols);
+OSStatus SSLGetNumberSupportedCiphers(SSLContextRef context, size_t *numCiphers);
+OSStatus SSLGetSupportedCiphers(SSLContextRef context, SSLCipherSuite *ciphers, size_t *numCiphers);
+OSStatus SSLSetEnabledCiphers(SSLContextRef context, const SSLCipherSuite *ciphers, size_t numCiphers);
+OSStatus SSLGetNumberEnabledCiphers(SSLContextRef context, size_t *numCiphers);
+OSStatus SSLGetEnabledCiphers(SSLContextRef context, SSLCipherSuite *ciphers, size_t *numCiphers);
+OSStatus SSLGetNegotiatedCipher(SSLContextRef context, SSLCipherSuite *cipherSuite);
+OSStatus SSLSetDiffieHellmanParams(SSLContextRef context, const void *dhParams, size_t dhParamsLen);
+OSStatus SSLGetDiffieHellmanParams(SSLContextRef context, const void * _Nullable *dhParams, size_t *dhParamsLen);
+OSStatus SSLSetCertificateAuthorities(SSLContextRef context, CFTypeRef certificateOrArray, Boolean replaceExisting);
+OSStatus SSLCopyCertificateAuthorities(SSLContextRef context, CFArrayRef  _Nullable *certificates);
+OSStatus SSLAddDistinguishedName(SSLContextRef context, const void *derDN, size_t derDNLen);
+OSStatus SSLCopyDistinguishedNames(SSLContextRef context, CFArrayRef  _Nullable *names);
+OSStatus SSLSetCertificate(SSLContextRef context, CFArrayRef certRefs);
+OSStatus SSLGetClientCertificateState(SSLContextRef context, SSLClientCertificateState *clientState);
+OSStatus SSLCopyPeerTrust(SSLContextRef context, SecTrustRef*  _Nullable trust);
+OSStatus SSLSetOCSPResponse(SSLContextRef context, CFDataRef response);
+OSStatus SSLSetSessionTicketsEnabled(SSLContextRef context, Boolean enabled);
+OSStatus SSLNewContext(Boolean isServer, SSLContextRef*  _Nullable contextPtr);
+
+
+
+// GrandCentralDispatch
+
+typedef uint64_t dispatch_time_t;
+typedef void* dispatch_data_t;
+typedef void *dispatch_queue_main_t;
+typedef void *dispatch_queue_global_t;
+typedef void *dispatch_queue_serial_t;
+typedef void *dispatch_queue_concurrent_t;
+typedef void *dispatch_queue_attr_t;
+typedef void *dispatch_object_t;
+typedef void *dispatch_semaphore_t;
+typedef void *dispatch_source_t;
+typedef void *dispatch_group_t;
+typedef intptr_t dispatch_once_t;
+typedef const struct dispatch_source_type_s *dispatch_source_type_t;
+typedef void (^dispatch_block_t)(void);
+typedef void (*dispatch_function_t)(void *);
+void dispatch_once(dispatch_once_t *predicate, dispatch_block_t block);
+void dispatch_apply(size_t iterations, dispatch_queue_t queue, void (^block)(size_t iteration));
+void dispatch_sync(dispatch_queue_t queue, dispatch_block_t block);
+void dispatch_sync_f(dispatch_queue_t queue, void *context, dispatch_function_t work);
+void dispatch_async(dispatch_queue_t queue, dispatch_block_t block);
+void dispatch_async_and_wait(dispatch_queue_t queue, dispatch_block_t block);
+void dispatch_async_and_wait_f(dispatch_queue_t queue, void *context, dispatch_function_t work);
+dispatch_data_t dispatch_data_create(const void *buffer, size_t size, dispatch_queue_t queue, dispatch_block_t destructor);
+void dispatch_barrier_async_and_wait(dispatch_queue_t queue, dispatch_block_t block);
+void dispatch_barrier_async_and_wait_f(dispatch_queue_t queue, void *context, dispatch_function_t work);
+dispatch_queue_main_t dispatch_get_main_queue(void);
+dispatch_queue_global_t dispatch_get_global_queue(intptr_t identifier, uintptr_t flags);
+dispatch_queue_t dispatch_queue_create(const char *label, dispatch_queue_attr_t attr);
+dispatch_queue_t dispatch_queue_create_with_target(const char *label, dispatch_queue_attr_t attr, dispatch_queue_t target);
+void dispatch_resume(dispatch_object_t object);
+void dispatch_activate(dispatch_object_t object);
+void dispatch_suspend(dispatch_object_t object);
+dispatch_time_t dispatch_time(dispatch_time_t when, int64_t delta);
+dispatch_time_t dispatch_walltime(const struct timespec *when, int64_t delta);
+dispatch_semaphore_t dispatch_semaphore_create(intptr_t value);
+intptr_t dispatch_semaphore_signal(dispatch_semaphore_t dsema);
+intptr_t dispatch_semaphore_wait(dispatch_semaphore_t dsema, dispatch_time_t timeout);
+void dispatch_source_cancel(dispatch_source_t source);
+dispatch_source_t dispatch_source_create(dispatch_source_type_t type, uintptr_t handle, uintptr_t mask, dispatch_queue_t queue);
+uintptr_t dispatch_source_get_data(dispatch_source_t source);
+void dispatch_source_set_cancel_handler(dispatch_source_t source, dispatch_block_t handler);
+void dispatch_source_set_event_handler(dispatch_source_t source, dispatch_block_t handler);
+void dispatch_source_set_timer(dispatch_source_t source, dispatch_time_t start, uint64_t interval, uint64_t leeway);
+void dispatch_after(dispatch_time_t when, dispatch_queue_t queue, dispatch_block_t block);
+size_t dispatch_data_get_size(dispatch_data_t data);
+void dispatch_group_async(dispatch_group_t group, dispatch_queue_t queue, dispatch_block_t block);
+dispatch_group_t dispatch_group_create(void);
+void dispatch_group_enter(dispatch_group_t group);
+void dispatch_group_leave(dispatch_group_t group);
+void dispatch_main(void);
+intptr_t dispatch_group_wait(dispatch_group_t group, dispatch_time_t timeout);
+void dispatch_group_notify(dispatch_group_t group, dispatch_queue_t queue, dispatch_block_t block);
+void dispatch_release(dispatch_object_t object);
+
+
 // System Configuration
 
 typedef struct __SCPreferences SCPreferencesRef;
 typedef struct __SCDynamicStore SCDynamicStoreRef;
+typedef struct __SCNetworkInterface SCNetworkInterfaceRef;
 typedef const struct AuthorizationOpaqueRef *AuthorizationRef;
+typedef void (*SCDynamicStoreCallBack)(SCDynamicStoreRef store, CFArrayRef changedKeys, void *info);
+typedef struct SCDynamicStoreContext {
+CFStringRef  _Nonnull (*copyDescription)(const void *info);
+void *info;
+void (*release)(const void *info);
+const void * _Nonnull (*retain)(const void *info);
+CFIndex version;
+} SCDynamicStoreContext;
 
 SCPreferencesRef SCPreferencesCreate(CFAllocatorRef allocator, CFStringRef name, CFStringRef prefsID);
 SCPreferencesRef SCPreferencesCreateWithAuthorization(CFAllocatorRef allocator, CFStringRef name, CFStringRef prefsID, AuthorizationRef authorization);
@@ -300,35 +628,41 @@ Boolean SCPreferencesCommitChanges(SCPreferencesRef prefs);
 Boolean SCPreferencesApplyChanges(SCPreferencesRef prefs);
 Boolean SCPreferencesLock(SCPreferencesRef prefs, Boolean wait);
 Boolean SCPreferencesUnlock(SCPreferencesRef prefs);
+CFStringRef SCNetworkInterfaceGetInterfaceType(SCNetworkInterfaceRef interface);
+CFStringRef SCNetworkInterfaceGetBSDName(SCNetworkInterfaceRef interface);
+CFArrayRef SCNetworkInterfaceCopyAll(void);
+SCDynamicStoreRef SCDynamicStoreCreateWithOptions(CFAllocatorRef allocator, CFStringRef name, CFDictionaryRef storeOptions, SCDynamicStoreCallBack callout, SCDynamicStoreContext *context);
+SCDynamicStoreRef SCDynamicStoreCreate(CFAllocatorRef allocator, CFStringRef name, SCDynamicStoreCallBack callout, SCDynamicStoreContext *context);
+Boolean SCDynamicStoreAddTemporaryValue(SCDynamicStoreRef store, CFStringRef key, CFPropertyListRef value);
+Boolean SCDynamicStoreAddValue(SCDynamicStoreRef store, CFStringRef key, CFPropertyListRef value);
+Boolean SCDynamicStoreSetMultiple(SCDynamicStoreRef store, CFDictionaryRef keysToSet, CFArrayRef keysToRemove, CFArrayRef keysToNotify);
+Boolean SCDynamicStoreSetValue(SCDynamicStoreRef store, CFStringRef key, CFPropertyListRef value);
+CFArrayRef SCDynamicStoreCopyKeyList(SCDynamicStoreRef store, CFStringRef pattern);
+CFDictionaryRef SCDynamicStoreCopyMultiple(SCDynamicStoreRef store, CFArrayRef keys, CFArrayRef patterns);
+CFArrayRef SCDynamicStoreCopyNotifiedKeys(SCDynamicStoreRef store);
+CFPropertyListRef SCDynamicStoreCopyValue(SCDynamicStoreRef store, CFStringRef key);
+Boolean SCDynamicStoreNotifyValue(SCDynamicStoreRef store, CFStringRef key);
+Boolean SCDynamicStoreSetNotificationKeys(SCDynamicStoreRef store, CFArrayRef keys, CFArrayRef patterns);
+Boolean SCDynamicStoreSetDispatchQueue(SCDynamicStoreRef store, dispatch_queue_t queue);
 
-// GrandCentralDispatch
+// Network
 
-typedef void* dispatch_queue_t;
-typedef void* dispatch_data_t;
-typedef void *dispatch_queue_main_t;
-typedef void *dispatch_queue_global_t;
-typedef void *dispatch_queue_serial_t;
-typedef void *dispatch_queue_concurrent_t;
-typedef void *dispatch_queue_attr_t;
-typedef void *dispatch_object_t;
-typedef intptr_t dispatch_once_t;
-typedef void (^dispatch_block_t)(void);
-typedef void (*dispatch_function_t)(void *);
-void dispatch_once(dispatch_once_t *predicate, dispatch_block_t block);
-void dispatch_apply(size_t iterations, dispatch_queue_t queue, void (^block)(size_t iteration));
-void dispatch_sync(dispatch_queue_t queue, dispatch_block_t block);
-void dispatch_sync_f(dispatch_queue_t queue, void *context, dispatch_function_t work);
-void dispatch_async_and_wait(dispatch_queue_t queue, dispatch_block_t block);
-void dispatch_async_and_wait_f(dispatch_queue_t queue, void *context, dispatch_function_t work);
-void dispatch_barrier_async_and_wait(dispatch_queue_t queue, dispatch_block_t block);
-void dispatch_barrier_async_and_wait_f(dispatch_queue_t queue, void *context, dispatch_function_t work);
-dispatch_queue_main_t dispatch_get_main_queue(void);
-dispatch_queue_global_t dispatch_get_global_queue(intptr_t identifier, uintptr_t flags);
-dispatch_queue_t dispatch_queue_create(const char *label, dispatch_queue_attr_t attr);
-dispatch_queue_t dispatch_queue_create_with_target(const char *label, dispatch_queue_attr_t attr, dispatch_queue_t target);
-void dispatch_resume(dispatch_object_t object);
-void dispatch_activate(dispatch_object_t object);
-void dispatch_suspend(dispatch_object_t object);
+typedef struct _DNSServiceRef_t *DNSServiceRef;
+typedef struct _DNSRecordRef_t *DNSRecordRef;
+typedef int dnssd_sock_t;
+typedef int32_t DNSServiceErrorType;
+
+void DNSServiceRefDeallocate(DNSServiceRef sdRef);
+DNSServiceErrorType DNSServiceGetProperty(const char *property, void *result, uint32_t *size);
+DNSServiceErrorType DNSServiceProcessResult(DNSServiceRef sdRef);
+void DNSServiceRefDeallocate(DNSServiceRef sdRef);
+dnssd_sock_t DNSServiceRefSockFD(DNSServiceRef sdRef);
+DNSServiceErrorType DNSServiceCreateDelegateConnection (
+   DNSServiceRef *sdRef,
+   int32_t pid,
+   uuid_t uuid
+);
+
 
 
 // XPC
@@ -457,6 +791,7 @@ xpc_object_t xpc_date_create_from_current(void);
 int64_t xpc_date_get_value(xpc_object_t xdate);
 xpc_object_t xpc_uuid_create(const unsigned char *uuid);
 const uint8_t * xpc_uuid_get_bytes(xpc_object_t xuuid);
+xpc_endpoint_t xpc_endpoint_create(xpc_connection_t connection);
 
 typedef void (^xpc_activity_handler_t)(xpc_activity_t activity);
 
@@ -465,3 +800,107 @@ void xpc_activity_unregister(const char *identifier);
 xpc_activity_state_t xpc_activity_get_state(xpc_activity_t activity);
 bool xpc_activity_set_state(xpc_activity_t activity, xpc_activity_state_t state);
 bool xpc_activity_should_defer(xpc_activity_t activity);
+void xpc_set_event(const char* stream, const char* event_name, xpc_object_t xdict);
+
+
+
+// Swift
+
+
+struct OpaqueValue;
+struct swift_once_t;
+enum class MetadataState : size_t {
+  Complete = 0x00,
+  NonTransitiveComplete = 0x01,
+  LayoutComplete = 0x3F,
+  Abstract = 0xFF,
+};
+
+typedef struct HeapMetadata HeapMetadata;
+typedef struct HeapObject HeapObject;
+struct InProcess {
+
+};
+struct TargetMetadata {};
+struct TargetForeignTypeMetadata {
+};
+typedef struct TargetMetadata Metadata;
+class MetadataRequest {
+};
+struct MetadataResponse {
+  const Metadata *Value;
+  MetadataState State;
+};
+struct BoxPair {
+  HeapObject *object;
+  OpaqueValue *buffer;
+};
+
+typedef struct ForeignTypeMetadata{} ForeignTypeMetadata;
+
+void * _Nonnull swift_errorRetain(void *_Nonnull swiftError) noexcept;
+void swift_errorRelease(void *_Nonnull swiftError) noexcept;
+const void *_Nullable swift_getTypeByMangledNameInContext(
+    const char *_Nullable typeNameStart, size_t typeNameLength,
+    const void *_Nullable context,
+    const void *_Nullable const *_Nullable genericArgs);
+bool swift_dynamicCast(void *_Nullable dest, void *_Nullable src,
+                                  const void *_Nullable srcType,
+                                  const void *_Nullable targetType,
+                                  uint32_t flags);
+const void *_Nullable getErrorMetadata();
+
+MetadataResponse
+swift_getForeignTypeMetadata(MetadataRequest request,
+                             ForeignTypeMetadata *nonUnique);
+const Metadata *swift_getObjectType(HeapObject *object);
+HeapObject *swift_initStaticObject(HeapMetadata const *metadata,
+                                   HeapObject *object);
+HeapObject *swift_initStackObject(HeapMetadata const *metadata,
+                                  HeapObject *object);
+HeapObject *swift_allocObject(HeapMetadata const *metadata,
+                              size_t requiredSize,
+                              size_t requiredAlignmentMask);
+void swift_verifyEndOfLifetime(HeapObject *object);
+BoxPair swift_allocBox(Metadata const *type);
+BoxPair swift_makeBoxUnique(OpaqueValue *buffer, Metadata const *type,
+                                    size_t alignMask);
+HeapObject* swift_allocEmptyBox();
+HeapObject *swift_retain(HeapObject *object);
+HeapObject *swift_retain_n(HeapObject *object, uint32_t n);
+HeapObject *swift_nonatomic_retain(HeapObject *object);
+HeapObject* swift_nonatomic_retain_n(HeapObject *object, uint32_t n);
+HeapObject *swift_tryRetain(HeapObject *object);
+bool swift_isDeallocating(HeapObject *object);
+void swift_release(HeapObject *object);
+void swift_nonatomic_release(HeapObject *object);
+void swift_release_n(HeapObject *object, uint32_t n);
+void swift_setDeallocating(HeapObject *object);
+void swift_nonatomic_release_n(HeapObject *object, uint32_t n);
+size_t swift_retainCount(HeapObject *object);
+size_t swift_unownedRetainCount(HeapObject *object);
+size_t swift_weakRetainCount(HeapObject *object);
+bool swift_isUniquelyReferenced(const void *);
+bool swift_isUniquelyReferenced_nonNull(const void *);
+bool swift_isUniquelyReferenced_nonNull_bridgeObject(uintptr_t bits);
+bool swift_isUniquelyReferencedNonObjC(const void *);
+bool swift_isUniquelyReferencedNonObjC_nonNull(const void *);
+bool swift_isUniquelyReferencedNonObjC_nonNull_bridgeObject(
+  uintptr_t bits);
+bool swift_isUniquelyReferenced_native(const struct HeapObject *);
+bool swift_isUniquelyReferenced_nonNull_native(const struct HeapObject *);
+bool swift_isEscapingClosureAtFileLocation(const struct HeapObject *object,
+                                           const unsigned char *filename,
+                                           int32_t filenameLength,
+                                           int32_t line,
+                                           int32_t column,
+                                           unsigned type);
+void swift_deallocObject(HeapObject *object, size_t allocatedSize,
+                         size_t allocatedAlignMask);
+void swift_deallocUninitializedObject(HeapObject *object, size_t allocatedSize,
+                                      size_t allocatedAlignMask);
+void swift_deallocClassInstance(HeapObject *object,
+                                 size_t allocatedSize,
+                                 size_t allocatedAlignMask);
+void swift_once(swift_once_t *predicate, void (*fn)(void *), void *context);
+OpaqueValue *swift_projectBox(HeapObject *object);
