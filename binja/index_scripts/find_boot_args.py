@@ -1,4 +1,7 @@
-
+#
+# This is designed to be operated on a loaded kernel or kernel cache where the symbols for `PE_parse_boot_argn` and
+# `PE_parse_boot_argn_internal` have been annotated to index all respective boot options.  Further enhancements should
+# use the calling site data to determine which kext is making the call to get the boot arg.
 
 PE_BOOT_ARGN = bv.get_functions_by_name("PE_parse_boot_argn")[0]
 PE_BOOT_ARNG_INTERNAL = bv.get_functions_by_name("PE_parse_boot_argn_internal")[0]

@@ -1,0 +1,22 @@
+typedef struct __aslclient *aslclient;
+typedef struct __aslmsg *aslmsg;
+typedef struct __aslresponse *aslresponse;
+
+int asl_add_log_file(aslclient asl, int fd);
+void asl_close(aslclient asl);
+void asl_free(aslmsg msg);
+const char * asl_get(aslmsg msg, const char *key);
+const char * asl_key(aslmsg msg, uint32_t n);
+int asl_log(aslclient asl, aslmsg msg, int level, const char *format, ...);
+aslmsg asl_new(uint32_t type);
+aslclient asl_open(const char *ident, const char *facility, uint32_t opts);
+int asl_remove_log_file(aslclient asl, int fd);
+aslresponse asl_search(aslclient asl, aslmsg msg);
+int asl_send(aslclient asl, aslmsg msg);
+int asl_set(aslmsg msg, const char *key, const char *value);
+int asl_set_filter(aslclient asl, int f);
+int asl_set_query(aslmsg msg, const char *key, const char *value, uint32_t op);
+int asl_unset(aslmsg msg, const char *key);
+int asl_vlog(aslclient asl, aslmsg msg, int level, const char *format, va_list ap);
+void aslresponse_free(aslresponse a);
+aslmsg aslresponse_next(aslresponse r);
